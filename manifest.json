@@ -2,8 +2,10 @@
   "name": "Studio Raheem",
   "short_name": "Raheem",
   "description": "Studio Raheem — Live Radio",
-  "start_url": "/",
+  "scope": ".",
+  "start_url": ".",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#0e0e0e",
   "theme_color": "#0e0e0e",
   "icons": [
