@@ -106,38 +106,6 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 }
 
 /* ─────────────────────────────────────────────────────
-   Ticker — fixed, below top area
-   ───────────────────────────────────────────────────── */
-.ticker-wrap {
-  position: fixed;
-  top: 65px;
-  left: 20px;
-  right: 20px;
-  z-index: 20;
-}
-
-.ticker-track {
-  display: inline-flex;
-  white-space: nowrap;
-}
-
-.ticker-track.scrolling {
-  animation: ticker-scroll var(--ticker-dur, 20s) linear infinite;
-}
-
-.ticker-item {
-  font-size: 16px;
-  color: #ffffff;
-  flex-shrink: 0;
-  padding-right: 66vw;
-}
-
-@keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-/* ─────────────────────────────────────────────────────
    Player body — art + track info, pinned above bar
    ───────────────────────────────────────────────────── */
 .player-body {
@@ -290,7 +258,6 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   appearance: none;
   height: 3px;
   border-radius: 0;
-  background: rgba(255,255,255,0.9);
   outline: none;
   cursor: pointer;
   transition: height 0.12s;
@@ -373,14 +340,38 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   inset: -12px -24px;
 }
 
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
 .sheet-title {
   font-size: 20px;
   font-weight: 400;
   letter-spacing: -0.01em;
   color: #000000;
-  margin-bottom: 4px;
   line-height: 1.2;
+  margin: 0;
 }
+
+.sheet-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.06);
+  color: #000000;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.sheet-close:hover  { background: rgba(0,0,0,0.12); }
+.sheet-close:active { background: rgba(0,0,0,0.18); }
 
 .sheet-option {
   width: 100%;
@@ -528,4 +519,20 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
     width: 430px;
     bottom: max(0px, calc(50vh - 466px));
   }
+
+  /* Right-side panels on desktop */
+  .sheet {
+    top: 0; bottom: 0; left: auto;
+    right: 0;
+    width: 320px;
+    border-radius: 0;
+    max-height: 100vh;
+    padding: 28px 24px max(28px, env(safe-area-inset-bottom));
+    transform: translateX(100%);
+  }
+  .sheet.open { transform: translateX(0); }
+
+  .sheet-handle { display: none; }
+
+  .sheet-close { display: flex; }
 }

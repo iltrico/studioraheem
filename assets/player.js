@@ -10,6 +10,14 @@ const DEFAULTS = {
 };
 const cfg = Object.assign({}, DEFAULTS, window.raheemPlayer || {});
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // ── DOM ─────────────────────────────────────────────────────────
 const audio          = document.getElementById('radioAudio');
 const ambientA       = document.getElementById('ambientA');
@@ -18,7 +26,6 @@ const artWrap        = document.getElementById('artWrap');
 const artImg         = document.getElementById('artImg');
 const artPlaceholder = document.getElementById('artPlaceholder');
 const liveBadge      = document.getElementById('liveBadge');
-const tickerTrack    = document.getElementById('tickerTrack');
 const trackBlock     = document.getElementById('trackBlock');
 const trackArtist    = document.getElementById('trackArtist');
 const trackTitle     = document.getElementById('trackTitle');
@@ -46,8 +53,8 @@ let lastTrackId     = null;
 let ambientLayer    = 'A';
 let toastTimer      = null;
 let historyTracks   = [];
-let _tickerText     = '';
 let castingActive   = false;
+let localVolume     = 0.8; // mirrors audio.volume; saved before casting takes over
 let currentArtist   = '';
 let currentTitle    = '';
 let currentAlbum    = '';
@@ -55,9 +62,10 @@ let currentArtUrl   = '';
 const trackScrollTimers = [];
 
 // ── Init ─────────────────────────────────────────────────────────
-audio.volume = parseFloat(volumeSlider.value);
+localVolume  = parseFloat(volumeSlider.value);
+audio.volume = localVolume;
 updateSlider();
-updateTicker('Studio Raheem');
+initMediaSession();
 // Pre-fetch current track on load so art + info are visible before play
 pollMetadata();
 
@@ -129,13 +137,18 @@ function stopPolling() {
   pollTimer = null;
 }
 
+let pollInFlight = false;
 async function pollMetadata() {
+  if (pollInFlight) return;
+  pollInFlight = true;
   try {
     const res = await fetch(cfg.metadataUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     applyMetadata(await res.json());
   } catch (e) {
     console.warn('[Raheem] metadata:', e.message);
+  } finally {
+    pollInFlight = false;
   }
 }
 
@@ -166,6 +179,14 @@ function applyMetadata(data) {
   if (castingActive) castStream();
 }
 
+function initMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  // Handlers check castingActive at invocation time — registered once, never re-registered
+  navigator.mediaSession.setActionHandler('play',  () => castingActive ? (setLoading(true), castStream()) : startPlay());
+  navigator.mediaSession.setActionHandler('pause', () => castingActive ? castStop() : stopPlay());
+  navigator.mediaSession.setActionHandler('stop',  () => castingActive ? castStop() : stopPlay());
+}
+
 function updateMediaSession() {
   if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({
@@ -177,15 +198,6 @@ function updateMediaSession() {
       : [],
   });
   navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-  if (castingActive) {
-    navigator.mediaSession.setActionHandler('play',  () => { setLoading(true); castStream(); });
-    navigator.mediaSession.setActionHandler('pause', castStop);
-    navigator.mediaSession.setActionHandler('stop',  castStop);
-  } else {
-    navigator.mediaSession.setActionHandler('play',  startPlay);
-    navigator.mediaSession.setActionHandler('pause', stopPlay);
-    navigator.mediaSession.setActionHandler('stop',  stopPlay);
-  }
 }
 
 function _setField(el, text) {
@@ -227,60 +239,54 @@ function initTrackScrolls() {
 
   if (!fields.length) return;
 
-  function scrollNext(idx, delay) {
-    const { span, overflow } = fields[idx % fields.length];
-    const scrollMs = (overflow / 80) * 1000;
+  let scrollCancelled = false;
 
-    const t = setTimeout(() => {
-      const anim = span.animate(
+  // Patch clearTrackScrolls for this scroll session
+  const prevClear = clearTrackScrolls;
+  function scrollField(idx) {
+    if (scrollCancelled) return;
+    const { span, overflow } = fields[idx % fields.length];
+    const scrollMs  = (overflow / 80) * 1000;
+    const returnMs  = (overflow / 160) * 1000; // scroll back at 2× speed
+
+    const t1 = setTimeout(() => {
+      if (scrollCancelled) return;
+      const fwd = span.animate(
         [{ transform: 'translateX(0)' }, { transform: `translateX(-${overflow}px)` }],
         { duration: scrollMs, easing: 'linear', fill: 'forwards' }
       );
-      anim.onfinish = () => {
+      fwd.onfinish = () => {
+        if (scrollCancelled) { fwd.cancel(); return; }
         const t2 = setTimeout(() => {
-          anim.cancel(); // snaps span back to translateX(0)
-          scrollNext(idx + 1, 20000);
-        }, 1000);
+          if (scrollCancelled) { fwd.cancel(); return; }
+          const bwd = span.animate(
+            [{ transform: `translateX(-${overflow}px)` }, { transform: 'translateX(0)' }],
+            { duration: returnMs, easing: 'linear', fill: 'forwards' }
+          );
+          bwd.onfinish = () => {
+            if (scrollCancelled) { bwd.cancel(); return; }
+            fwd.cancel();
+            bwd.cancel();
+            scrollField(idx + 1);
+          };
+        }, 5000);
         trackScrollTimers.push(t2);
       };
-    }, delay);
+    }, 5000);
 
-    trackScrollTimers.push(t);
+    trackScrollTimers.push(t1);
   }
 
-  scrollNext(0, 20000);
-}
+  // Mark this session cancelled when clearTrackScrolls is next called
+  const origClear = clearTrackScrolls;
+  clearTrackScrolls = function () {
+    scrollCancelled = true;
+    clearTrackScrolls = origClear;
+    origClear();
+  };
 
-// ── Ticker ───────────────────────────────────────────────────────
-function updateTicker(text) {
-  if (!text) return;
-  _tickerText = text;
-  tickerTrack.innerHTML =
-    `<span class="ticker-item">${text}</span>` +
-    `<span class="ticker-item">${text}</span>`;
-  tickerTrack.classList.remove('scrolling');
-  void tickerTrack.offsetWidth;
-  _applyTickerMetrics();
-  void tickerTrack.offsetWidth;
-  tickerTrack.classList.add('scrolling');
+  scrollField(0);
 }
-
-function _applyTickerMetrics() {
-  // One unit = half the total track width (text + 66vw gap)
-  // Keyframe: translateX(0) → translateX(-50%) — perfectly seamless loop
-  const unitPx = tickerTrack.scrollWidth / 2;
-  tickerTrack.style.setProperty('--ticker-dur', `${Math.max(5, unitPx / 40)}s`);
-}
-
-// Recalculate on resize — both 100vw and 66vw change
-window.addEventListener('resize', () => {
-  if (!_tickerText) return;
-  tickerTrack.classList.remove('scrolling');
-  void tickerTrack.offsetWidth;
-  _applyTickerMetrics();
-  void tickerTrack.offsetWidth;
-  tickerTrack.classList.add('scrolling');
-});
 
 // ── Art + ambient background ──────────────────────────────────────
 function updateArt(url) {
@@ -290,6 +296,8 @@ function updateArt(url) {
   incoming.style.backgroundImage = `url(${url})`;
   incoming.style.opacity = '1';
   outgoing.style.opacity = '0';
+  // Release the decoded image from the outgoing layer after the CSS transition (1.4 s)
+  setTimeout(() => { outgoing.style.backgroundImage = ''; }, 1500);
   ambientLayer = ambientLayer === 'A' ? 'B' : 'A';
 
   // Load foreground art image
@@ -300,22 +308,26 @@ function updateArt(url) {
     artImg.classList.add('loaded');
     artPlaceholder.classList.add('hidden');
 
-    // Canvas colour extraction → radial gradient on body
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 40;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, 40, 40);
-      const d = ctx.getImageData(0, 0, 40, 40).data;
-      let r = 0, g = 0, b = 0;
-      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; }
-      const n = d.length / 4;
-      r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
-      document.body.style.background =
-        `radial-gradient(ellipse 110% 65% at 50% 0%, rgba(${r},${g},${b},0.4) 0%, #0e0e0e 60%)`;
-    } catch (_) {
-      document.body.style.background = '#0e0e0e';
-    }
+    // Canvas colour extraction → radial gradient on body (deferred to idle time)
+    const extractColor = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 40, 40);
+        const d = ctx.getImageData(0, 0, 40, 40).data;
+        let r = 0, g = 0, b = 0;
+        for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; }
+        const n = d.length / 4;
+        r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+        document.body.style.background =
+          `radial-gradient(ellipse 110% 65% at 50% 0%, rgba(${r},${g},${b},0.4) 0%, #0e0e0e 60%)`;
+      } catch (_) {
+        document.body.style.background = '#0e0e0e';
+      }
+    };
+    if ('requestIdleCallback' in window) requestIdleCallback(extractColor);
+    else setTimeout(extractColor, 200);
   };
   img.onerror = () => {
     artImg.classList.remove('loaded');
@@ -325,6 +337,15 @@ function updateArt(url) {
 }
 
 // ── Volume ────────────────────────────────────────────────────────
+function syncSliderToReceiver(session) {
+  if (!session) return;
+  const vol = session.getVolume();
+  if (vol == null) return;
+  const level = session.isMuted() ? 0 : vol;
+  volumeSlider.value = level;
+  updateSlider();
+}
+
 volumeSlider.addEventListener('input', () => {
   const vol = parseFloat(volumeSlider.value);
   if (castingActive) {
@@ -334,13 +355,18 @@ volumeSlider.addEventListener('input', () => {
       session.setReceiverMuted(vol === 0);
     }
   } else {
+    localVolume  = vol;
     audio.volume = vol;
     audio.muted  = vol === 0;
   }
   updateSlider();
 });
 
-function updateSlider() {}
+function updateSlider() {
+  const pct = parseFloat(volumeSlider.value) * 100;
+  volumeSlider.style.background =
+    `linear-gradient(to right, rgba(255,255,255,0.9) ${pct}%, rgba(255,255,255,0.25) ${pct}%)`;
+}
 
 // ── Stream sheet ──────────────────────────────────────────────────
 function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open'); }
@@ -348,6 +374,7 @@ function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.class
 
 sheetOverlay.addEventListener('click', closeSheet);
 streamSheet.querySelector('.sheet-handle').addEventListener('click', closeSheet);
+document.getElementById('streamClose').addEventListener('click', closeSheet);
 
 // ── Playlist sheet ────────────────────────────────────────────────
 function openPlaylist() {
@@ -366,10 +393,10 @@ function openPlaylist() {
       row.className = 'playlist-row' + (i === 0 ? ' playlist-row--now' : '');
       const query = encodeURIComponent([artist, title].filter(Boolean).join(' '));
       row.innerHTML = `
-        ${art ? `<img class="playlist-art" src="${art}" alt="" loading="lazy">` : '<div class="playlist-art playlist-art--empty"></div>'}
+        ${art ? `<img class="playlist-art" src="${escapeHtml(art)}" alt="" loading="lazy">` : '<div class="playlist-art playlist-art--empty"></div>'}
         <div class="playlist-info">
-          <span class="playlist-artist">${artist}</span>
-          <span class="playlist-title">${title}</span>
+          <span class="playlist-artist">${escapeHtml(artist)}</span>
+          <span class="playlist-title">${escapeHtml(title)}</span>
         </div>
         <a class="playlist-spotify" href="https://open.spotify.com/search/${query}" target="_blank" rel="noopener" aria-label="Search on Spotify">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 0 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 0 1 .207.857zm1.223-2.722a.78.78 0 0 1-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.78.78 0 0 1-.973-.519.781.781 0 0 1 .519-.972c3.632-1.102 8.147-.568 11.234 1.328a.78.78 0 0 1 .257 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 1 1-.543-1.793c3.563-1.08 9.484-.872 13.221 1.372a.937.937 0 0 1-.061 1.578z"/></svg>
@@ -389,6 +416,7 @@ function closePlaylist() {
 playlistBtn.addEventListener('click', openPlaylist);
 playlistOverlay.addEventListener('click', closePlaylist);
 playlistSheet.querySelector('.sheet-handle').addEventListener('click', closePlaylist);
+document.getElementById('playlistClose').addEventListener('click', closePlaylist);
 
 let playlistTouchStartY = 0;
 playlistSheet.addEventListener('touchstart', e => { playlistTouchStartY = e.touches[0].clientY; }, { passive: true });
@@ -414,13 +442,7 @@ airplayOption.addEventListener('click', () => {
 });
 
 // Chromecast option
-castOption.addEventListener('click', () => {
-  closeSheet();
-  if (!castReady) { showToast('Chromecast not available.'); return; }
-  cast.framework.CastContext.getInstance()
-    .requestSession()
-    .catch(err => { if (err !== 'cancel') showToast('Could not connect to Chromecast.'); });
-});
+castOption.addEventListener('click', () => { closeSheet(); triggerCast(); });
 
 // ── Stream button: show/hide + smart routing ──────────────────────
 let airplayAvail = false;
@@ -456,7 +478,8 @@ if (audio.remote && typeof audio.remote.watchAvailability === 'function') {
 }
 
 // ── Chromecast (background) ───────────────────────────────────────
-let castReady = false;
+let castReady          = false;
+let castVolumeHandler  = null;
 window['__onGCastApiAvailable'] = function (ok) {
   castReady = ok;
   if (!ok) return;
@@ -479,6 +502,9 @@ window['__onGCastApiAvailable'] = function (ok) {
         audio.pause();
         audio.muted = true;
         const session    = ctx.getCurrentSession();
+        syncSliderToReceiver(session);
+        castVolumeHandler = () => syncSliderToReceiver(ctx.getCurrentSession());
+        session.addEventListener(cast.framework.SessionEventType.VOLUME_CHANGED, castVolumeHandler);
         const alreadyPlaying = session && session.getMediaSession();
         if (alreadyPlaying) {
           // Rejoined an existing cast — just sync UI and resume polling
@@ -492,8 +518,16 @@ window['__onGCastApiAvailable'] = function (ok) {
         }
       }
       if (evt.castState === cast.framework.CastState.NOT_CONNECTED) {
+        const prevSession = ctx.getCurrentSession();
+        if (prevSession && castVolumeHandler) {
+          prevSession.removeEventListener(cast.framework.SessionEventType.VOLUME_CHANGED, castVolumeHandler);
+          castVolumeHandler = null;
+        }
         castingActive = false;
-        audio.muted = false;
+        audio.muted   = false;
+        audio.volume  = localVolume;
+        volumeSlider.value = localVolume;
+        updateSlider();
         stopPlay();
       }
     }

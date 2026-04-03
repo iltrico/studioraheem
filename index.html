@@ -76,7 +76,12 @@
   <div class="sheet-overlay" id="sheetOverlay"></div>
   <div class="sheet" id="streamSheet" role="dialog" aria-label="Stream to device">
     <div class="sheet-handle"></div>
-    <p class="sheet-title">Stream to</p>
+    <div class="sheet-header">
+      <p class="sheet-title">Stream to</p>
+      <button class="sheet-close" id="streamClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
     <button class="sheet-option" id="airplayOption">AirPlay</button>
     <button class="sheet-option" id="castOption">Chromecast</button>
   </div>
@@ -85,7 +90,12 @@
   <div class="sheet-overlay" id="playlistOverlay"></div>
   <div class="sheet" id="playlistSheet" role="dialog" aria-label="Recently played">
     <div class="sheet-handle"></div>
-    <p class="sheet-title">Recently played</p>
+    <div class="sheet-header">
+      <p class="sheet-title">Recently played</p>
+      <button class="sheet-close" id="playlistClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
     <div id="playlistItems"></div>
   </div>
 
