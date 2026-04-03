@@ -322,8 +322,14 @@ function updateArt(url) {
         r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
         document.body.style.background =
           `radial-gradient(ellipse 110% 65% at 50% 0%, rgba(${r},${g},${b},0.4) 0%, #0e0e0e 60%)`;
+        // Match system bar color to the blended gradient top (rgba(r,g,b,0.4) over #0e0e0e)
+        const tr = Math.round(r * 0.4 + 14 * 0.6);
+        const tg = Math.round(g * 0.4 + 14 * 0.6);
+        const tb = Math.round(b * 0.4 + 14 * 0.6);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', `rgb(${tr},${tg},${tb})`);
       } catch (_) {
         document.body.style.background = '#0e0e0e';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0e0e0e');
       }
     };
     if ('requestIdleCallback' in window) requestIdleCallback(extractColor);
@@ -332,6 +338,8 @@ function updateArt(url) {
   img.onerror = () => {
     artImg.classList.remove('loaded');
     artPlaceholder.classList.remove('hidden');
+    document.body.style.background = '#0e0e0e';
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0e0e0e');
   };
   img.src = url;
 }
