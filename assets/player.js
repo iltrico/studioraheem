@@ -326,10 +326,12 @@ function updateArt(url) {
         const tr = Math.round(r * 0.4 + 14 * 0.6);
         const tg = Math.round(g * 0.4 + 14 * 0.6);
         const tb = Math.round(b * 0.4 + 14 * 0.6);
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', `rgb(${tr},${tg},${tb})`);
+        ambientThemeColor = `rgb(${tr},${tg},${tb})`;
+        setThemeColor(ambientThemeColor);
       } catch (_) {
         document.body.style.background = '#0e0e0e';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0e0e0e');
+        ambientThemeColor = '#0e0e0e';
+        setThemeColor(ambientThemeColor);
       }
     };
     if ('requestIdleCallback' in window) requestIdleCallback(extractColor);
@@ -339,7 +341,8 @@ function updateArt(url) {
     artImg.classList.remove('loaded');
     artPlaceholder.classList.remove('hidden');
     document.body.style.background = '#0e0e0e';
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0e0e0e');
+    ambientThemeColor = '#0e0e0e';
+    setThemeColor(ambientThemeColor);
   };
   img.src = url;
 }
@@ -384,8 +387,12 @@ function updateSlider() {
 }
 
 // ── Stream sheet ──────────────────────────────────────────────────
-function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open'); }
-function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); }
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+let ambientThemeColor = '#0e0e0e';
+function setThemeColor(color) { themeColorMeta.setAttribute('content', color); }
+
+function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open');    setThemeColor('#ffffff'); }
+function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); setThemeColor(ambientThemeColor); }
 
 sheetOverlay.addEventListener('click', closeSheet);
 streamSheet.querySelector('.sheet-handle').addEventListener('click', closeSheet);
@@ -422,10 +429,12 @@ function openPlaylist() {
   }
   playlistSheet.classList.add('open');
   playlistOverlay.classList.add('open');
+  setThemeColor('#ffffff');
 }
 function closePlaylist() {
   playlistSheet.classList.remove('open');
   playlistOverlay.classList.remove('open');
+  setThemeColor(ambientThemeColor);
 }
 
 playlistBtn.addEventListener('click', openPlaylist);
