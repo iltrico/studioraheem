@@ -377,11 +377,8 @@ function updateSlider() {
 }
 
 // ── Stream sheet ──────────────────────────────────────────────────
-const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-function setThemeColor(color) { themeColorMeta.setAttribute('content', color); }
-
-function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open');    setThemeColor('#ffffff'); }
-function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); setThemeColor('transparent'); }
+function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open'); }
+function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); }
 
 sheetOverlay.addEventListener('click', closeSheet);
 streamSheet.querySelector('.sheet-handle').addEventListener('click', closeSheet);
@@ -418,12 +415,10 @@ function openPlaylist() {
   }
   playlistSheet.classList.add('open');
   playlistOverlay.classList.add('open');
-  setThemeColor('#ffffff');
 }
 function closePlaylist() {
   playlistSheet.classList.remove('open');
   playlistOverlay.classList.remove('open');
-  setThemeColor('transparent');
 }
 
 playlistBtn.addEventListener('click', openPlaylist);
