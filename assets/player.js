@@ -49,6 +49,7 @@ const toast          = document.getElementById('toast');
 // ── State ────────────────────────────────────────────────────────
 let isPlaying       = false;
 let pollTimer       = null;
+let pollInFlight    = false;
 let lastTrackId     = null;
 let ambientLayer    = 'A';
 let toastTimer      = null;
@@ -137,7 +138,6 @@ function stopPolling() {
   pollTimer = null;
 }
 
-let pollInFlight = false;
 async function pollMetadata() {
   if (pollInFlight) return;
   pollInFlight = true;
