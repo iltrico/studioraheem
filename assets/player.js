@@ -47,12 +47,19 @@ let ambientLayer    = 'A';
 let toastTimer      = null;
 let historyTracks   = [];
 let _tickerText     = '';
+let castingActive   = false;
+let currentArtist   = '';
+let currentTitle    = '';
+let currentAlbum    = '';
+let currentArtUrl   = '';
 const trackScrollTimers = [];
 
 // ── Init ─────────────────────────────────────────────────────────
 audio.volume = parseFloat(volumeSlider.value);
 updateSlider();
 updateTicker('Studio Raheem');
+// Pre-fetch current track on load so art + info are visible before play
+pollMetadata();
 
 // ── Playback ─────────────────────────────────────────────────────
 function startPlay() {
@@ -143,8 +150,30 @@ function applyMetadata(data) {
   const album  = track.album    || track.albumName   || '';
   const art    = track.imageUrl || track.cover_url   || track.image || '';
 
+  currentArtist = artist;
+  currentTitle  = title;
+  currentAlbum  = album;
+  currentArtUrl = art;
+
   animateTrackChange(artist, title, album);
   if (art) updateArt(art);
+  updateMediaSession();
+  if (castingActive) castStream();
+}
+
+function updateMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title:   currentTitle  || 'Studio Raheem',
+    artist:  currentArtist || 'Studio Raheem',
+    album:   currentAlbum  || '',
+    artwork: currentArtUrl
+      ? [{ src: currentArtUrl, sizes: '512x512', type: 'image/jpeg' }]
+      : [],
+  });
+  navigator.mediaSession.setActionHandler('play',  startPlay);
+  navigator.mediaSession.setActionHandler('pause', stopPlay);
+  navigator.mediaSession.setActionHandler('stop',  stopPlay);
 }
 
 function _setField(el, text) {
@@ -393,7 +422,14 @@ window['__onGCastApiAvailable'] = function (ok) {
       streamBtn.classList.toggle('active',
         evt.castState === cast.framework.CastState.CONNECTED ||
         evt.castState === cast.framework.CastState.CONNECTING);
-      if (evt.castState === cast.framework.CastState.CONNECTED) castStream();
+      if (evt.castState === cast.framework.CastState.CONNECTED) {
+        castingActive = true;
+        if (isPlaying) stopPlay();
+        castStream();
+      }
+      if (evt.castState === cast.framework.CastState.NOT_CONNECTED) {
+        castingActive = false;
+      }
     }
   );
 };
@@ -401,7 +437,14 @@ window['__onGCastApiAvailable'] = function (ok) {
 function castStream() {
   const session = cast.framework.CastContext.getInstance().getCurrentSession();
   if (!session) return;
-  const info = new chrome.cast.media.MediaInfo(cfg.streamUrl, 'audio/mpeg');
+  const info       = new chrome.cast.media.MediaInfo(cfg.streamUrl, 'audio/mpeg');
+  info.streamType  = chrome.cast.media.StreamType.LIVE;
+  const meta       = new chrome.cast.media.MusicTrackMediaMetadata();
+  meta.title       = currentTitle  || 'Studio Raheem';
+  meta.artistName  = currentArtist || 'Studio Raheem';
+  meta.albumName   = currentAlbum  || '';
+  if (currentArtUrl) meta.images = [new chrome.cast.Image(currentArtUrl)];
+  info.metadata    = meta;
   session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(console.error);
 }
 

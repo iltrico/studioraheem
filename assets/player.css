@@ -161,7 +161,6 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .art-wrap {
   position: relative;
   width: 100%;
-  max-width: 350px;
   aspect-ratio: 1 / 1;
   border-radius: 0;
   overflow: hidden;
@@ -491,4 +490,20 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   .player-body { flex-direction: row; flex-wrap: wrap; gap: 12px; padding-bottom: 12px; }
   .art-wrap { width: auto; height: calc(100vh - var(--bar-h) - 24px); max-width: 50vw; }
   .track-block { flex: 1; min-width: 0; }
+}
+
+@media (min-width: 431px) {
+  .player-body {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 430px;
+  }
+
+  .bottom-bar {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 430px;
+  }
 }
