@@ -490,6 +490,10 @@ let castVolumeHandler  = null;
 window['__onGCastApiAvailable'] = function (ok) {
   castReady = ok;
   if (!ok) return;
+  if (typeof cast === 'undefined') {
+    setTimeout(() => window['__onGCastApiAvailable'](ok), 100);
+    return;
+  }
   const ctx = cast.framework.CastContext.getInstance();
   ctx.setOptions({
     receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
