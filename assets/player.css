@@ -21,6 +21,17 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100dvh; overflow: hidden; background: var(--bg); }
 
+/* Fill the top safe-area zone with the app background so the status bar blends in */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: var(--bg);
+  z-index: 100;
+  pointer-events: none;
+}
+
 body {
   background: var(--bg);
   color: var(--white);
@@ -112,7 +123,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--bar-h) - 14px);
+  bottom: calc(var(--bar-h) + env(safe-area-inset-bottom) - 14px);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -219,10 +230,10 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .bottom-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: var(--bar-h);
+  height: calc(var(--bar-h) + env(safe-area-inset-bottom));
   padding: 0 20px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: transparent;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bg);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -509,7 +520,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
     right: auto;
     transform: translateX(-50%);
     width: 430px;
-    bottom: calc(max(0px, calc(50vh - 466px)) + var(--bar-h) - 14px);
+    bottom: calc(max(0px, calc(50vh - 466px)) + var(--bar-h) + env(safe-area-inset-bottom) - 14px);
   }
 
   .bottom-bar {
