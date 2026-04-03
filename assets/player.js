@@ -340,7 +340,10 @@ function updateArt(url) {
 function syncSliderToReceiver(session) {
   if (!session || sliderDragging) return;
   const vol = session.getVolume();
-  if (vol == null) return;
+  if (vol == null) {
+    setTimeout(() => syncSliderToReceiver(session), 500);
+    return;
+  }
   const level = session.isMuted() ? 0 : vol;
   volumeSlider.value = level;
   updateSlider();
