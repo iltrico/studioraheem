@@ -338,7 +338,7 @@ function updateArt(url) {
 
 // ── Volume ────────────────────────────────────────────────────────
 function syncSliderToReceiver(session) {
-  if (!session) return;
+  if (!session || sliderDragging) return;
   const vol = session.getVolume();
   if (vol == null) return;
   const level = session.isMuted() ? 0 : vol;
@@ -346,13 +346,17 @@ function syncSliderToReceiver(session) {
   updateSlider();
 }
 
+let sliderDragging = false;
+volumeSlider.addEventListener('pointerdown', () => { sliderDragging = true; });
+volumeSlider.addEventListener('pointerup',   () => { sliderDragging = false; });
+
 volumeSlider.addEventListener('input', () => {
   const vol = parseFloat(volumeSlider.value);
   if (castingActive) {
     const session = cast.framework.CastContext.getInstance().getCurrentSession();
     if (session) {
-      session.setReceiverVolumeLevel(vol);
-      session.setReceiverMuted(vol === 0);
+      session.setVolume(vol).catch(e => console.warn('[Raheem] setVolume:', e));
+      session.setMute(vol === 0).catch(e => console.warn('[Raheem] setMute:', e));
     }
   } else {
     localVolume  = vol;
