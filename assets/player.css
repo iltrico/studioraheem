@@ -348,7 +348,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 }
 
 .sheet-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 400;
   letter-spacing: -0.01em;
   color: #000000;
@@ -379,7 +379,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   align-items: center;
   gap: 16px;
   padding: 16px 0;
-  font-size: 14px;
+  font-size: 16px;
   font-family: var(--font);
   color: #000000;
   background: none;
@@ -405,7 +405,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
    Playlist sheet
    ───────────────────────────────────────────────────── */
 .playlist-empty {
-  font-size: 14px;
+  font-size: 16px;
   color: #000000;
   padding: 16px 0;
   text-align: center;
@@ -436,14 +436,14 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   gap: 2px;
 }
 .playlist-artist {
-  font-size: 14px;
+  font-size: 16px;
   color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .playlist-title {
-  font-size: 13px;
+  font-size: 15px;
   color: #000000;
   white-space: nowrap;
   overflow: hidden;
@@ -524,7 +524,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   .sheet {
     top: 0; bottom: 0; left: auto;
     right: 0;
-    width: 320px;
+    width: 400px;
     border-radius: 0;
     max-height: 100vh;
     padding: 28px 24px max(28px, env(safe-area-inset-bottom));

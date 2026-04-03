@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Studio Raheem — Live</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-apple-touch.png">
+  <link rel="stylesheet" href="assets/player.css?v=15">
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</head>
+<body>
+
+  <!-- Ambient background layers (crossfade) -->
+  <div class="ambient" id="ambientA"></div>
+  <div class="ambient" id="ambientB"></div>
+
+  <!-- Logo — fixed top-left -->
+  <img class="station-logo" src="assets/logo.svg" alt="Studio Raheem">
+
+  <!-- Live badge — fixed top-right -->
+  <span class="live-badge" id="liveBadge">
+    <span class="live-dot"></span>Live
+  </span>
+
+  <!-- Player body: art + track info -->
+  <main class="player-body">
+
+    <div class="art-wrap" id="artWrap" role="button" tabindex="0" aria-label="Play">
+      <img class="art-img" id="artImg" src="" alt="Album art" crossorigin="anonymous">
+      <div class="art-placeholder" id="artPlaceholder">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" aria-hidden="true">
+          <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+        </svg>
+      </div>
+      <div class="play-overlay" id="playOverlay" aria-hidden="true">
+        <svg id="iconPlay"    viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="iconPause"   viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <svg id="iconLoading" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/></svg>
+      </div>
+    </div>
+
+    <div class="track-block" id="trackBlock">
+      <div class="track-artist" id="trackArtist"><span></span></div>
+      <div class="track-title"  id="trackTitle"><span></span></div>
+      <div class="track-album"  id="trackAlbum"><span></span></div>
+    </div>
+
+  </main>
+
+  <!-- Bottom bar: stream | volume | playlist -->
+  <div class="bottom-bar">
+    <button class="bar-btn" id="streamBtn" aria-label="Stream to device">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2C12 14.08 7.05 10 1 10zm20-6H3C1.9 4 1 4.9 1 6v3h2V6h18v12h-7v2h7c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/>
+      </svg>
+    </button>
+    <div class="volume-wrap">
+      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
+    </div>
+    <button class="bar-btn" id="playlistBtn" aria-label="Recently played">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Stream-to bottom sheet -->
+  <div class="sheet-overlay" id="sheetOverlay"></div>
+  <div class="sheet" id="streamSheet" role="dialog" aria-label="Stream to device">
+    <div class="sheet-handle"></div>
+    <p class="sheet-title">Stream to</p>
+    <button class="sheet-option" id="airplayOption">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 22h12l-6-6-6 6zM21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h3v-2H3V5h18v12h-3v2h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+      AirPlay
+    </button>
+    <button class="sheet-option" id="castOption">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2C12 14.08 7.05 10 1 10zm20-6H3C1.9 4 1 4.9 1 6v3h2V6h18v12h-7v2h7c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>
+      Chromecast
+    </button>
+  </div>
+
+  <!-- Playlist bottom sheet -->
+  <div class="sheet-overlay" id="playlistOverlay"></div>
+  <div class="sheet" id="playlistSheet" role="dialog" aria-label="Recently played">
+    <div class="sheet-handle"></div>
+    <p class="sheet-title">Recently played</p>
+    <div id="playlistItems"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <audio id="radioAudio" x-webkit-airplay="allow" preload="none"></audio>
+  <script src="assets/player.js?v=12"></script>
+</body>
+</html>
