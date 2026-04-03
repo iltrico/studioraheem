@@ -322,16 +322,8 @@ function updateArt(url) {
         r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
         document.body.style.background =
           `radial-gradient(ellipse 110% 65% at 50% 0%, rgba(${r},${g},${b},0.4) 0%, #0e0e0e 60%)`;
-        // Match system bar color to the blended gradient top (rgba(r,g,b,0.4) over #0e0e0e)
-        const tr = Math.round(r * 0.4 + 14 * 0.6);
-        const tg = Math.round(g * 0.4 + 14 * 0.6);
-        const tb = Math.round(b * 0.4 + 14 * 0.6);
-        ambientThemeColor = `rgb(${tr},${tg},${tb})`;
-        setThemeColor(ambientThemeColor);
       } catch (_) {
         document.body.style.background = '#0e0e0e';
-        ambientThemeColor = '#0e0e0e';
-        setThemeColor(ambientThemeColor);
       }
     };
     if ('requestIdleCallback' in window) requestIdleCallback(extractColor);
@@ -341,8 +333,6 @@ function updateArt(url) {
     artImg.classList.remove('loaded');
     artPlaceholder.classList.remove('hidden');
     document.body.style.background = '#0e0e0e';
-    ambientThemeColor = '#0e0e0e';
-    setThemeColor(ambientThemeColor);
   };
   img.src = url;
 }
@@ -388,11 +378,10 @@ function updateSlider() {
 
 // ── Stream sheet ──────────────────────────────────────────────────
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-let ambientThemeColor = '#0e0e0e';
 function setThemeColor(color) { themeColorMeta.setAttribute('content', color); }
 
 function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open');    setThemeColor('#ffffff'); }
-function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); setThemeColor(ambientThemeColor); }
+function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); setThemeColor('transparent'); }
 
 sheetOverlay.addEventListener('click', closeSheet);
 streamSheet.querySelector('.sheet-handle').addEventListener('click', closeSheet);
@@ -434,7 +423,7 @@ function openPlaylist() {
 function closePlaylist() {
   playlistSheet.classList.remove('open');
   playlistOverlay.classList.remove('open');
-  setThemeColor(ambientThemeColor);
+  setThemeColor('transparent');
 }
 
 playlistBtn.addEventListener('click', openPlaylist);
