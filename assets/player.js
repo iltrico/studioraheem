@@ -111,11 +111,11 @@ artWrap.addEventListener('keydown', e => {
   if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); artWrap.click(); }
 });
 
-audio.addEventListener('playing', () => { setPlayState(true);  pollAndSchedule(); });
-audio.addEventListener('waiting',  () => setLoading(true));
-audio.addEventListener('canplay',  () => { if (isPlaying) setLoading(false); });
-audio.addEventListener('error',    () => { setPlayState(false); stopPolling(); showToast('Stream error — please try again.'); });
-audio.addEventListener('ended',    () => { setPlayState(false); stopPolling(); });
+audio.addEventListener('playing', () => { if (castingActive) return; setPlayState(true);  pollAndSchedule(); });
+audio.addEventListener('waiting',  () => { if (castingActive) return; setLoading(true); });
+audio.addEventListener('canplay',  () => { if (castingActive) return; if (isPlaying) setLoading(false); });
+audio.addEventListener('error',    () => { if (castingActive) return; setPlayState(false); stopPolling(); showToast('Stream error — please try again.'); });
+audio.addEventListener('ended',    () => { if (castingActive) return; setPlayState(false); stopPolling(); });
 
 // ── Metadata ─────────────────────────────────────────────────────
 function pollAndSchedule() {
@@ -346,8 +346,8 @@ function updateSlider() {}
 function openSheet()  { streamSheet.classList.add('open');    sheetOverlay.classList.add('open'); }
 function closeSheet() { streamSheet.classList.remove('open'); sheetOverlay.classList.remove('open'); }
 
-streamBtn.addEventListener('click', openSheet);
 sheetOverlay.addEventListener('click', closeSheet);
+streamSheet.querySelector('.sheet-handle').addEventListener('click', closeSheet);
 
 // ── Playlist sheet ────────────────────────────────────────────────
 function openPlaylist() {
@@ -388,6 +388,7 @@ function closePlaylist() {
 
 playlistBtn.addEventListener('click', openPlaylist);
 playlistOverlay.addEventListener('click', closePlaylist);
+playlistSheet.querySelector('.sheet-handle').addEventListener('click', closePlaylist);
 
 let playlistTouchStartY = 0;
 playlistSheet.addEventListener('touchstart', e => { playlistTouchStartY = e.touches[0].clientY; }, { passive: true });
@@ -421,10 +422,36 @@ castOption.addEventListener('click', () => {
     .catch(err => { if (err !== 'cancel') showToast('Could not connect to Chromecast.'); });
 });
 
-// ── AirPlay availability ──────────────────────────────────────────
+// ── Stream button: show/hide + smart routing ──────────────────────
+let airplayAvail = false;
+let castAvail    = false;
+
+function updateStreamBtn() {
+  const any = airplayAvail || castAvail;
+  streamBtn.style.visibility = any ? '' : 'hidden';
+}
+
+function triggerAirPlay() {
+  audio.remote.prompt().catch(() => showToast('No AirPlay devices found nearby.'));
+}
+
+function triggerCast() {
+  cast.framework.CastContext.getInstance()
+    .requestSession()
+    .catch(err => { if (err !== 'cancel') showToast('Could not connect to Chromecast.'); });
+}
+
+streamBtn.addEventListener('click', () => {
+  if (airplayAvail && castAvail) { openSheet(); return; }
+  if (airplayAvail) { triggerAirPlay(); return; }
+  if (castAvail)    { triggerCast();    return; }
+});
+
+// AirPlay availability
 if (audio.remote && typeof audio.remote.watchAvailability === 'function') {
   audio.remote.watchAvailability(avail => {
-    streamBtn.classList.toggle('active', avail);
+    airplayAvail = avail;
+    updateStreamBtn();
   }).catch(() => {});
 }
 
@@ -433,25 +460,36 @@ let castReady = false;
 window['__onGCastApiAvailable'] = function (ok) {
   castReady = ok;
   if (!ok) return;
-  cast.framework.CastContext.getInstance().setOptions({
+  const ctx = cast.framework.CastContext.getInstance();
+  ctx.setOptions({
     receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-    autoJoinPolicy:        chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+    autoJoinPolicy:        chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED,
   });
-  cast.framework.CastContext.getInstance().addEventListener(
+  // SDK loaded — assume Cast is available until discovery says otherwise
+  castAvail = true;
+  updateStreamBtn();
+  ctx.addEventListener(
     cast.framework.CastContextEventType.CAST_STATE_CHANGED,
     evt => {
-      streamBtn.classList.toggle('active',
-        evt.castState === cast.framework.CastState.CONNECTED ||
-        evt.castState === cast.framework.CastState.CONNECTING);
+      castAvail = evt.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
+      updateStreamBtn();
       if (evt.castState === cast.framework.CastState.CONNECTED) {
         castingActive = true;
-        // Pause local audio without clearing src so the OS media session stays alive
+        // Silence local audio without clearing src (keeps OS media session alive)
         audio.pause();
         audio.muted = true;
-        setPlayState(false);
-        stopPolling();
-        setLoading(true);
-        castStream();
+        const session    = ctx.getCurrentSession();
+        const alreadyPlaying = session && session.getMediaSession();
+        if (alreadyPlaying) {
+          // Rejoined an existing cast — just sync UI and resume polling
+          setPlayState(true);
+          pollAndSchedule();
+        } else {
+          setPlayState(false);
+          stopPolling();
+          setLoading(true);
+          castStream();
+        }
       }
       if (evt.castState === cast.framework.CastState.NOT_CONNECTED) {
         castingActive = false;

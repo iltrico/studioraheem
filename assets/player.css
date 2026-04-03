@@ -359,10 +359,18 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .sheet.open { transform: translateY(0); }
 
 .sheet-handle {
+  position: relative;
   width: 36px; height: 4px;
   border-radius: 2px;
   background: rgba(0,0,0,0.15);
   margin: 0 auto 18px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-handle::before {
+  content: '';
+  position: absolute;
+  inset: -12px -24px;
 }
 
 .sheet-title {
@@ -381,13 +389,26 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
   gap: 16px;
   padding: 16px 0;
   font-size: 14px;
+  font-family: var(--font);
   color: #000000;
+  background: none;
+  border: none;
   border-bottom: 1px solid rgba(0,0,0,0.07);
   text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;
 }
 .sheet-option:last-child { border-bottom: none; }
-.sheet-option:active { opacity: 0.55; }
+.sheet-option:hover  { opacity: 0.65; }
+.sheet-option:active { opacity: 0.4; }
+
+.sheet-option svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: #000000;
+}
 
 /* ─────────────────────────────────────────────────────
    Playlist sheet
