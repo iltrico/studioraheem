@@ -96,11 +96,16 @@ function setPlayState(playing) {
   artWrap.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   liveBadge.classList.toggle('active', playing);
   bottomBar.classList.toggle('active', playing);
+  updateMediaSession();
 }
 
 // Tap art to play / pause
 artWrap.addEventListener('click', () => {
-  if (isPlaying) stopPlay(); else startPlay();
+  if (castingActive) {
+    if (isPlaying) castStop(); else { setLoading(true); castStream(); }
+  } else {
+    if (isPlaying) stopPlay(); else startPlay();
+  }
 });
 artWrap.addEventListener('keydown', e => {
   if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); artWrap.click(); }
@@ -171,9 +176,16 @@ function updateMediaSession() {
       ? [{ src: currentArtUrl, sizes: '512x512', type: 'image/jpeg' }]
       : [],
   });
-  navigator.mediaSession.setActionHandler('play',  startPlay);
-  navigator.mediaSession.setActionHandler('pause', stopPlay);
-  navigator.mediaSession.setActionHandler('stop',  stopPlay);
+  navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  if (castingActive) {
+    navigator.mediaSession.setActionHandler('play',  () => { setLoading(true); castStream(); });
+    navigator.mediaSession.setActionHandler('pause', castStop);
+    navigator.mediaSession.setActionHandler('stop',  castStop);
+  } else {
+    navigator.mediaSession.setActionHandler('play',  startPlay);
+    navigator.mediaSession.setActionHandler('pause', stopPlay);
+    navigator.mediaSession.setActionHandler('stop',  stopPlay);
+  }
 }
 
 function _setField(el, text) {
@@ -314,8 +326,17 @@ function updateArt(url) {
 
 // ── Volume ────────────────────────────────────────────────────────
 volumeSlider.addEventListener('input', () => {
-  audio.volume = parseFloat(volumeSlider.value);
-  audio.muted  = audio.volume === 0;
+  const vol = parseFloat(volumeSlider.value);
+  if (castingActive) {
+    const session = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (session) {
+      session.setReceiverVolumeLevel(vol);
+      session.setReceiverMuted(vol === 0);
+    }
+  } else {
+    audio.volume = vol;
+    audio.muted  = vol === 0;
+  }
   updateSlider();
 });
 
@@ -424,11 +445,18 @@ window['__onGCastApiAvailable'] = function (ok) {
         evt.castState === cast.framework.CastState.CONNECTING);
       if (evt.castState === cast.framework.CastState.CONNECTED) {
         castingActive = true;
-        if (isPlaying) stopPlay();
+        // Pause local audio without clearing src so the OS media session stays alive
+        audio.pause();
+        audio.muted = true;
+        setPlayState(false);
+        stopPolling();
+        setLoading(true);
         castStream();
       }
       if (evt.castState === cast.framework.CastState.NOT_CONNECTED) {
         castingActive = false;
+        audio.muted = false;
+        stopPlay();
       }
     }
   );
@@ -445,7 +473,18 @@ function castStream() {
   meta.albumName   = currentAlbum  || '';
   if (currentArtUrl) meta.images = [new chrome.cast.Image(currentArtUrl)];
   info.metadata    = meta;
-  session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(console.error);
+  session.loadMedia(new chrome.cast.media.LoadRequest(info))
+    .then(() => { setPlayState(true); pollAndSchedule(); })
+    .catch(err => { console.error(err); setPlayState(false); });
+}
+
+function castStop() {
+  const session = cast.framework.CastContext.getInstance().getCurrentSession();
+  if (!session) return;
+  const media = session.getMediaSession();
+  const done  = () => { setPlayState(false); stopPolling(); };
+  if (media) media.stop(null, done, err => { console.error(err); done(); });
+  else done();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────

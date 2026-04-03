@@ -111,10 +111,9 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .ticker-wrap {
   position: fixed;
   top: 65px;
-  left: 0;
-  right: 0;
+  left: 20px;
+  right: 20px;
   z-index: 20;
-  overflow: hidden;
 }
 
 .ticker-track {
@@ -231,7 +230,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .track-artist,
 .track-title,
 .track-album {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 400;
   line-height: 1.2;
   color: var(--white);
@@ -483,7 +482,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 @media (max-width: 390px) {
   .track-artist,
   .track-title,
-  .track-album { font-size: 20px; }
+  .track-album { font-size: 24px; }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -498,6 +497,7 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
     right: auto;
     transform: translateX(-50%);
     width: 430px;
+    bottom: calc(max(0px, calc(50vh - 466px)) + var(--bar-h) - 14px);
   }
 
   .bottom-bar {
@@ -505,5 +505,6 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
     right: auto;
     transform: translateX(-50%);
     width: 430px;
+    bottom: max(0px, calc(50vh - 466px));
   }
 }
