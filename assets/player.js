@@ -253,7 +253,7 @@ function initTrackScrolls() {
       if (scrollCancelled) return;
       const fwd = span.animate(
         [{ transform: 'translateX(0)' }, { transform: `translateX(-${overflow}px)` }],
-        { duration: scrollMs, easing: 'linear', fill: 'forwards' }
+        { duration: scrollMs, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }
       );
       fwd.onfinish = () => {
         if (scrollCancelled) { fwd.cancel(); return; }
@@ -261,7 +261,7 @@ function initTrackScrolls() {
           if (scrollCancelled) { fwd.cancel(); return; }
           const bwd = span.animate(
             [{ transform: `translateX(-${overflow}px)` }, { transform: 'translateX(0)' }],
-            { duration: returnMs, easing: 'linear', fill: 'forwards' }
+            { duration: returnMs, easing: 'ease-in', fill: 'forwards' }
           );
           bwd.onfinish = () => {
             if (scrollCancelled) { bwd.cancel(); return; }
@@ -269,10 +269,10 @@ function initTrackScrolls() {
             bwd.cancel();
             scrollField(idx + 1);
           };
-        }, 5000);
+        }, 2000);
         trackScrollTimers.push(t2);
       };
-    }, 5000);
+    }, 3000);
 
     trackScrollTimers.push(t1);
   }
