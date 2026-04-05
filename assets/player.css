@@ -292,8 +292,10 @@ button:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset:
 .bar-btn:first-child { justify-content: flex-start; }
 .bar-btn:last-child  { justify-content: flex-end; }
 .bar-btn svg { width: 22px; height: 22px; }
-.bar-btn:hover  { opacity: 0.7; }
-.bar-btn.active { opacity: 0.6; }
+.bar-btn:hover          { opacity: 0.7; }
+.bar-btn.active         { opacity: 0.6; }
+.bar-btn.disabled       { opacity: 0.3; cursor: default; }
+.bar-btn.disabled:hover { opacity: 0.3; }
 
 /* ─────────────────────────────────────────────────────
    Bottom sheet

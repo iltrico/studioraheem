@@ -459,8 +459,7 @@ let castAvail    = false;
 function updateStreamBtn() {
   const any = airplayAvail || castAvail;
   streamBtn.disabled = !any;
-  streamBtn.style.opacity = any ? '' : '0.3';
-  streamBtn.style.cursor  = any ? '' : 'default';
+  streamBtn.classList.toggle('disabled', !any);
 }
 
 function triggerAirPlay() {
